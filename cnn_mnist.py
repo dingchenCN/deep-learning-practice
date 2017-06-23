@@ -65,7 +65,7 @@ def main(_):
     b_conv1 = bias_variable([32])
 
     x_image = tf.reshape(x, [-1,28,28,1])  # 自己查文档
-
+    # Relu 对比sigmoid。sig过滤过多信息。
     h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1) # 28*28
     h_pool1 = max_pool_2x2(h_conv1) # 14*14
 
@@ -83,14 +83,14 @@ def main(_):
 
 # 为了减少过拟合，我们在输出层之前加入dropout
     keep_prob = tf.placeholder("float") # 用一个placeholder来代表一个神经元的输出在dropout中保持不变的概率。这样我们可以在训练过程中启用dropout，在测试过程中关闭dropout
-    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob) # 随机舍弃一半？？？
+    h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob) # 随机舍弃一半？？？ 每次training 随机舍弃一部分，防止过拟合。
 # 最后，我们添加一个softmax层，就像前面的单层softmax regression一样
     W_fc2 = weight_variable([1024, 10])
     b_fc2 = bias_variable([10])
 
     y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
-# 用更加复杂的ADAM优化器来做梯度最速下降
+# 用更加复杂的ADAM优化器来做梯度最速下降。滚石头，避免局部最优。
     cross_entropy = tf.reduce_mean(  # 交叉熵
         tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y_conv))  # logits？？？
     train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
