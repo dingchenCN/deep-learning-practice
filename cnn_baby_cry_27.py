@@ -24,6 +24,8 @@ from __future__ import print_function
 
 import argparse
 import sys
+import numpy as np
+import array
 
 from tensorflow.examples.tutorials.mnist import input_data
 
@@ -62,8 +64,8 @@ def main(_):
     # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
     # Create the model
-    x = tf.placeholder(tf.float32, [None, 112964]) # 每个input数据是1600的向量  about None  http://learningtensorflow.com/lesson4/
-    W = tf.Variable(tf.zeros([112964, 9])) # 输出类别 9 类
+    x = tf.placeholder(tf.float32, [None, 112960]) # 每个input数据是1600的向量  about None  http://learningtensorflow.com/lesson4/
+    W = tf.Variable(tf.zeros([112960, 9])) # 输出类别 9 类
     b = tf.Variable(tf.zeros([9]))
     y = tf.matmul(x, W) + b   #
     # Define loss and optimizer
@@ -96,10 +98,10 @@ def main(_):
                             strides=[1, 2, 1, 1], padding='VALID') #
 #########################
 
-    W_conv1 = weight_variable([112964, 1, 1, 32])  # [filter_height, filter_width, in_channels, out_channels]
+    W_conv1 = weight_variable([1600, 1, 1, 32])  # [filter_height, filter_width, in_channels, out_channels]
     b_conv1 = bias_variable([32])
 
-    x_sound = tf.reshape(x, [-1,112964,1,1])  # -1代表一维,或者由其他推出   reshape重新定义tensor由外往内  [batch, in_height, in_width, in_channels]
+    x_sound = tf.reshape(x, [-1,112960,1,1])  # -1代表一维,或者由其他推出   reshape重新定义tensor由外往内  [batch, in_height, in_width, in_channels]
     # https://www.tensorflow.org/api_docs/python/tf/reshape
 
     # Relu 对比sigmoid。sig过滤过多信息。
@@ -139,16 +141,19 @@ def main(_):
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
 
+    batch = [[],[]]
     for i in range(203):
-      batch = training_set.next_batch(10)
-      if i%10 == 0:
+      batch[0].append(training_set[i][0])
+      batch[1].append(training_set[i][1])
+      # batch = training_set.next_batch(10)
+      if (i+1)%20 == 0:
         train_accuracy = accuracy.eval(feed_dict={
-            x:batch[0], y_: batch[1], keep_prob: 1.0})  # 每个batch，batch[0] 是数据  batch[1]是label
+            x:np.asarray(batch[0]), y_: np.asarray(batch[1]), keep_prob: 1.0})  # 每个batch，batch[0] 是数据  batch[1]是label
         print("step %d, training accuracy %g"%(i, train_accuracy))
-      train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
-
-    print("test accuracy %g"%accuracy.eval(feed_dict={
-        x: test_set[0], y_: test_set[1], keep_prob: 1.0}))
+        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
+        batch = [[], []]
+        print("test accuracy %g"%accuracy.eval(feed_dict={
+            x: test_set[0], y_: test_set[1], keep_prob: 1.0}))
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
