@@ -32,15 +32,41 @@ FLAGS = None
 
 def main(_):
     # Import data
-    mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+    training_set = []
+    length = 0
+    with open('/Users/christie/Desktop/AIhackathon/adjust data length/training set.csv', 'r') as f:
+        for line in f.readlines():
+            record = []
+            line_vec = line.strip().split(',')
+            if length < line_vec.__len__():
+                length = line_vec.__len__()
+
+            record.append(line_vec[4:])
+            record.append(line_vec[0])
+            training_set.append(record)
+    print(length)
+    length = 0
+    test_set = []
+    with open('/Users/christie/Desktop/AIhackathon/adjust data length/test set.csv', 'r') as f:
+        for line in f.readlines():
+            record = []
+            line_vec = line.strip().split(',')
+            if length < line_vec.__len__():
+                length = line_vec.__len__()
+            record.append(line_vec[4:])
+            record.append(line_vec[0])
+            test_set.append(record)
+    print(length)
+
+    # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
     # Create the model
-    x = tf.placeholder(tf.float32, [None, 784])
-    W = tf.Variable(tf.zeros([784, 10]))
-    b = tf.Variable(tf.zeros([10]))
-    y = tf.matmul(x, W) + b   # ??? [None, ] zz
+    x = tf.placeholder(tf.float32, [None, 1600]) # 每个input数据是1600的向量  about None  http://learningtensorflow.com/lesson4/
+    W = tf.Variable(tf.zeros([1600, 9])) # 输出类别 9 类
+    b = tf.Variable(tf.zeros([9]))
+    y = tf.matmul(x, W) + b   #
     # Define loss and optimizer
-    y_ = tf.placeholder(tf.float32, [None, 10])
+    y_ = tf.placeholder(tf.float32, [None, 9])
 
 #########################
     def weight_variable(shape):
@@ -58,40 +84,40 @@ def main(_):
     def conv2d(x, W):
       return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME') #输入输出一样维度
 
-    def max_pool_2x2(x):
-      return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                            strides=[1, 2, 2, 1], padding='SAME') #
+    def max_pool_3x1(x):
+      return tf.nn.max_pool(x, ksize=[1, 3, 1, 1],        # [batch, height, width, channels]   ksize: A list of ints that has length >= 4. The size of the window for each dimension of the input tensor.
+                            strides=[1, 3, 1, 1], padding='SAME') #
 #########################
 
-    W_conv1 = weight_variable([5, 5, 1, 32])
+    W_conv1 = weight_variable([100, 1, 1, 32])  # [filter_height, filter_width, in_channels, out_channels]
     b_conv1 = bias_variable([32])
 
-    x_image = tf.reshape(x, [-1,28,28,1])  # -1代表一维,或者由其他推出   reshape重新定义tensor由外往内
+    x_sound = tf.reshape(x, [-1,1600,1,1])  # -1代表一维,或者由其他推出   reshape重新定义tensor由外往内  [batch, in_height, in_width, in_channels]
     # https://www.tensorflow.org/api_docs/python/tf/reshape
 
     # Relu 对比sigmoid。sig过滤过多信息。
     # 实际卷积处
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1) # 28*28
-    h_pool1 = max_pool_2x2(h_conv1) # 14*14
+    h_conv1 = tf.nn.relu(conv2d(x_sound, W_conv1) + b_conv1) # 1501*1
+    h_pool1 = max_pool_3x1(h_conv1) # 501*1
 
-    W_conv2 = weight_variable([5, 5, 32, 64])
+    W_conv2 = weight_variable([100, 1, 32, 64])
     b_conv2 = bias_variable([64])
 
-    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)  #14*14
-    h_pool2 = max_pool_2x2(h_conv2) # 7*7
+    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)  # 402*1
+    h_pool2 = max_pool_3x1(h_conv2) # 134*1
 
-    W_fc1 = weight_variable([7 * 7 * 64, 1024]) # 1024 自设？？？
+    W_fc1 = weight_variable([134 * 1 * 64, 1024]) # 1024 自设？？？
     b_fc1 = bias_variable([1024])
 
-    h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+    h_pool2_flat = tf.reshape(h_pool2, [-1, 134*1*64])
     h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)  # 这里做了第一次的激活 用relu
 
 # 为了减少过拟合，我们在输出层之前加入dropout
     keep_prob = tf.placeholder("float") # 用一个placeholder来代表一个神经元的输出在dropout中保持不变的概率。这样我们可以在训练过程中启用dropout，在测试过程中关闭dropout
     h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob) # 随机舍弃一半？？？ 每次training 随机舍弃一部分，防止过拟合。
 # 最后，我们添加一个softmax层，就像前面的单层softmax regression一样
-    W_fc2 = weight_variable([1024, 10])
-    b_fc2 = bias_variable([10])
+    W_fc2 = weight_variable([1024, 9])
+    b_fc2 = bias_variable([9])
 
     y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
@@ -106,16 +132,16 @@ def main(_):
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
 
-    for i in range(20000):
-      batch = mnist.train.next_batch(50)
-      if i%100 == 0:
+    for i in range(203):
+      batch = training_set.next_batch(10)
+      if i%10 == 0:
         train_accuracy = accuracy.eval(feed_dict={
-            x:batch[0], y_: batch[1], keep_prob: 1.0})
+            x:batch[0], y_: batch[1], keep_prob: 1.0})  # 每个batch，batch[0] 是数据  batch[1]是label
         print("step %d, training accuracy %g"%(i, train_accuracy))
       train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
 
     print("test accuracy %g"%accuracy.eval(feed_dict={
-        x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+        x: test_set[0], y_: test_set[1], keep_prob: 1.0}))
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
