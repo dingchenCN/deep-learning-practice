@@ -7,7 +7,7 @@ sentences = doc.sents
 # sentence2 = sentences.__next__()
 sentence = next(sentences)
 sentence2 = next(sentences)
-print(type(sentence))
+# print(type(sentence))
 # https://spacy.io/docs/usage/data-model
 assert token is sentence[0]
 assert sentence.text == 'Hello, world.'
@@ -29,3 +29,23 @@ for lexeme in nlp.vocab:
     else:
         lexeme.shape_ = 'M'
 assert token.shape_ == 'W'
+
+from spacy.attrs import ORTH, LIKE_URL, IS_OOV
+
+attr_ids = [ORTH, LIKE_URL, IS_OOV]
+doc_array = doc.to_array(attr_ids)
+assert doc_array.shape == (len(doc), len(attr_ids))
+assert doc[0].orth == doc_array[0, 0]
+assert doc[1].orth == doc_array[1, 0]
+assert doc[0].like_url == doc_array[0, 1]
+assert list(doc_array[:, 1]) == [t.like_url for t in doc]
+
+doc = nlp("Apples and oranges are similar. Boots and hippos aren't.")
+
+apples = doc[0]
+oranges = doc[2]
+boots = doc[6]
+hippos = doc[8]
+
+assert apples.similarity(oranges) >= boots.similarity(hippos)
+
